@@ -30,10 +30,10 @@ const userSchema = new mongoose.Schema({
     friends: [
         {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User', unique: true
+            ref: 'User',
         },
     ],
-    friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User',unique: true}]
+    friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', }]
 });
 
 const messagesSchema = new mongoose.Schema(

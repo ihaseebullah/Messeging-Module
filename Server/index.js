@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const { User, Messeges, Messages } = require('./Models/MessegingModel');
 const jwt = require('jsonwebtoken')
 const WebSocket = require("ws");
-const cookies = require('cookie-parser')
+const cookies = require('cookie-parser');
+const ai = require('./Chatbot/contorller');
 // Connect to MongoDB
 mongoose.connect("mongodb+srv://admin:ESkp0sknEgP1YpaK@cluster0.bp2y7j1.mongodb.net/messeging", {
     useNewUrlParser: true,
@@ -27,10 +28,22 @@ app.use(cookies({}))
 app.post('/api/post', async (req, res) => {
     const { username } = req.body;
     try {
-        const user = new User({ username });
-        await user.save();
-        res.status(201).json({ user });
+        const eleven = await User.findOne({ username: "Eleven Ai" })
+        if (eleven) {
+            const user = new User({ username, friends: [eleven._id] });
+            await user.save();
+            res.status(201).json({ user });
+        } else {
+            const user = new User({ username: "Eleven Ai" });
+            await user.save().then(async (eleven) => {
+                const user = new User({ username, friends: [eleven._id] });
+                await user.save();
+                res.status(201).json({ user });
+
+            })
+        }
     } catch (error) {
+        console.log(error);
         res.status(500).json({ error: 'Error creating user' });
     }
 });
@@ -79,22 +92,15 @@ app.get('/find', async (req, res) => {
 app.put('/api/send/FR/:userId/:friendId', async (req, res) => {
     const { userId, friendId } = req.params;
     try {
-        // Update only if the friendId is not in friends or friendRequests
-        const updateResult = await User.findOneAndUpdate(
-            {
-                _id: userId,
-                friends: { $ne: friendId }, 
-                friendRequests: { $ne: friendId }
-            },
-            { $push: { friendRequests: friendId } },
-            { new: true }
-        );
-
-        if (!updateResult) {
-            return res.status(400).json({ message: 'User is already a friend or request already sent' });
+        const user = await User.findByIdAndUpdate(friendId)
+        if (user.friends.includes(userId)) {
+            res.status(400).json({ error: 'You are a friend already' });
+        } else if (user.friendRequests.includes(userId)) {
+            res.status(400).json({ error: 'You have already sent a friend request' });
+        } else {
+            await User.findByIdAndUpdate(friendId, { $push: { friendRequests: userId } });
+            res.status(200).json({ message: 'Friend Request Sent' });
         }
-
-        res.status(201).json({ message: 'Friend request sent' });
     } catch (error) {
         console.log(error.message);
         res.status(500).json({ error: 'Error sending friend request' });
@@ -110,13 +116,13 @@ app.put('/api/updateFriendRequest/:userId/:friendId/:status', async (req, res) =
             res.status(200).json({ message: 'Friend Request Declined' });
         } else {
             // Accept the friend request
-            await User.findByIdAndUpdate(userId, { 
-                $push: { friends: friendId }, 
-                $pull: { friendRequests: friendId } 
+            await User.findByIdAndUpdate(userId, {
+                $push: { friends: friendId },
+                $pull: { friendRequests: friendId }
             });
 
-            await User.findByIdAndUpdate(friendId, { 
-                $push: { friends: userId } 
+            await User.findByIdAndUpdate(friendId, {
+                $push: { friends: userId }
             });
 
             res.status(200).json({ message: 'Friend Request Accepted' });
@@ -156,6 +162,8 @@ app.get('/api/messages/:userId/:friendId', async (req, res) => {
     res.status(200).json(messages)
 })
 
+
+
 app.post('/login', async (req, res) => {
     const { username } = req.body;
     console.log(username)
@@ -179,7 +187,6 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ error: 'Error logging in' });
     }
 })
-
 
 
 module.exports = { app }
