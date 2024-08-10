@@ -2,8 +2,7 @@ const { WebSocket } = require("ws");
 const jwt = require('jsonwebtoken');
 const { app } = require("..");
 const cookieParser = require("cookie-parser");
-const { Messeges } = require("../Models/MessegingModel");
-
+const { Messages } = require('../Models/MessegingModel')
 app.use(cookieParser());
 const server = app.listen(3000, () => {
     console.log(`Listening on port ${3000}`);
@@ -22,7 +21,7 @@ wss.on("connection", (ws, req) => {
         return;
     }
 
-    jwt.verify(token, "MYSECRETE", (err, {user}) => {
+    jwt.verify(token, "MYSECRETE", (err, { user }) => {
         if (err) {
             ws.send("Invalid token");
             ws.close();
@@ -48,7 +47,7 @@ wss.on("connection", (ws, req) => {
             console.log(`Received message from ${sender} to ${reciever}: ${text}`);
 
             try {
-                const newMessageForDb = new Messeges({
+                const newMessageForDb = new Messages({
                     text: text,
                     receiver: reciever,
                     sender: sender,
